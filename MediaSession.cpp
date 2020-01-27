@@ -539,23 +539,24 @@ CDMi_RESULT MediaKeySession::Decrypt(
     }
     
     DRM_DWORD rgdwMappings[2];
-    DRM_RESULT err = DRM_SUCCESS;
+    DRM_RESULT dr = DRM_SUCCESS;
+
 #ifndef PR_3_3
     if (!initWithLast15) {
-      err = Drm_Reader_InitDecrypt(m_oDecryptContext, nullptr, 0);
+      dr = Drm_Reader_InitDecrypt(m_oDecryptContext, nullptr, 0);
     } else {
         // Initialize the decryption context for Cocktail packaged
         // content. This is a no-op for AES packaged content.
         if (payloadDataSize <= 15)
         {
-            err = Drm_Reader_InitDecrypt(m_oDecryptContext, (DRM_BYTE*)payloadData, payloadDataSize);
+            dr = Drm_Reader_InitDecrypt(m_oDecryptContext, (DRM_BYTE*)payloadData, payloadDataSize);
         }
         else
         {
-            err = Drm_Reader_InitDecrypt(m_oDecryptContext, (DRM_BYTE*)(payloadData + payloadDataSize - 15), payloadDataSize);
+            dr = Drm_Reader_InitDecrypt(m_oDecryptContext, (DRM_BYTE*)(payloadData + payloadDataSize - 15), payloadDataSize);
         }
     }
-    if (DRM_FAILED(err))
+    if (DRM_FAILED(dr))
     {
         fprintf(stderr, "Failed to init decrypt\n");
         return CDMi_S_FALSE;
@@ -608,8 +609,8 @@ CDMi_RESULT MediaKeySession::Decrypt(
         reinterpret_cast<DRM_DWORD*>(f_pcbOpaqueClearContent),
         reinterpret_cast<DRM_BYTE**>(f_ppbOpaqueClearContent)));
 #else
-    err = Drm_Reader_Decrypt(m_oDecryptContext, &ctrContext, (DRM_BYTE*)payloadData, payloadDataSize);
-    if (DRM_FAILED(err))
+    dr = Drm_Reader_Decrypt(m_oDecryptContext, &ctrContext, (DRM_BYTE*)payloadData, payloadDataSize);
+    if (DRM_FAILED(dr))
     {
         fprintf(stderr, "Failed to run Drm_Reader_Decrypt\n");
         return CDMi_S_FALSE;
@@ -618,9 +619,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
 
     // Call commit during the decryption of the first sample.
     if (!m_fCommit) {
-        //err = Drm_Reader_Commit(m_poAppContext, &opencdm_output_levels_callback, &levels_);
-        err = Drm_Reader_Commit(m_poAppContext, _PolicyCallback, nullptr); // TODO: pass along user data
-        if (DRM_FAILED(err))
+        //dr = Drm_Reader_Commit(m_poAppContext, &opencdm_output_levels_callback, &levels_);
+        dr = Drm_Reader_Commit(m_poAppContext, _PolicyCallback, nullptr); // TODO: pass along user data
+        if (DRM_FAILED(dr))
         {
             fprintf(stderr, "Failed to do Reader Commit\n");
             return CDMi_S_FALSE;
@@ -633,6 +634,13 @@ CDMi_RESULT MediaKeySession::Decrypt(
     *f_pcbOpaqueClearContent = payloadDataSize;
     *f_ppbOpaqueClearContent = (uint8_t *)payloadData;
 #endif
+
+ErrorExit:
+    if (DRM_FAILED(dr)) {
+      const DRM_CHAR* description;
+      DRM_ERR_GetErrorNameFromCode(dr, &description);
+      fprintf(stderr, "playready decyrypt error: %s\n", description);
+    }
 
     return CDMi_SUCCESS;
 }
