@@ -538,6 +538,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
         return CDMi_S_FALSE;
     }
     
+    DRM_DWORD rgdwMappings[2];
     DRM_RESULT err = DRM_SUCCESS;
     if (!initWithLast15) {
       err = Drm_Reader_InitDecrypt(m_oDecryptContext, nullptr, 0);
