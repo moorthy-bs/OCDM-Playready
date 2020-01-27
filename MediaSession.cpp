@@ -540,6 +540,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
     
     DRM_DWORD rgdwMappings[2];
     DRM_RESULT err = DRM_SUCCESS;
+#ifndef PR_3_3
     if (!initWithLast15) {
       err = Drm_Reader_InitDecrypt(m_oDecryptContext, nullptr, 0);
     } else {
@@ -559,6 +560,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
         fprintf(stderr, "Failed to init decrypt\n");
         return CDMi_S_FALSE;
     }
+#endif
 
     DRM_AES_COUNTER_MODE_CONTEXT ctrContext = { 0 };
     // TODO: can be done in another way (now abusing "initWithLast15" variable)
@@ -589,10 +591,18 @@ CDMi_RESULT MediaKeySession::Decrypt(
     }
 
     ChkDR(Drm_Reader_DecryptOpaque(
+#ifdef NETFLIX
         &m_oDecryptContext,
+#else
+        m_oDecryptContext,
+#endif
         f_cdwSubSampleMapping,
         reinterpret_cast<const DRM_DWORD*>(f_pdwSubSampleMapping),
+#ifdef NETFLIX
         oAESContext.qwInitializationVector,
+#else
+        ctrContext.qwInitializationVector,
+#endif
         payloadDataSize,
         (DRM_BYTE *) payloadData,
         reinterpret_cast<DRM_DWORD*>(f_pcbOpaqueClearContent),
